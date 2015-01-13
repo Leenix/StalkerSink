@@ -1,12 +1,15 @@
 import datetime
 from threading import Thread
-from serial.serialutil import SerialException
 import serial
+from serial.serialutil import SerialException
+import time
 import struct
 import logging
-from ThingspeakChannel import *
 from Queue import Queue
-import time
+import sys
+
+from ThingspeakChannel import *
+from settings import *
 
 __author__ = 'Leenix'
 
@@ -20,7 +23,8 @@ try:
     ser = serial.Serial(SERIAL_PORT, BAUD_RATE)
 
 except SerialException:
-    logger.critical("Serial port cannot be opened :(")
+    logger.critical("Serial port [{}] cannot be opened :(".format(SERIAL_PORT))
+    sys.exit()
 
 
 def read_xbee():
@@ -169,6 +173,9 @@ def read_loop():
         data_string = read_xbee_packet()
         processor_queue.put(data_string)
 
+        logger.info("Packet received")
+        logger.debug("Data: {}".format(data_string))
+
 
 def process_loop():
     """
@@ -183,9 +190,12 @@ def process_loop():
         raw_entry = processor_queue.get()
         processed_entry = process_stalker_packet(raw_entry)
         processor_queue.task_done()
+        logger.info("Packet processed")
+        logger.debug("Packet: {}".format(processed_entry))
 
         write_entry_to_file(processed_entry)
         upload_queue.put(processed_entry)
+        logger.debug("Saved to file")
 
 
 def upload_loop():
@@ -202,8 +212,12 @@ def upload_loop():
         thingspeak_packet = ThingspeakChannel.map_entry(processed_entry)
         ThingspeakChannel.update(thingspeak_packet)
         upload_queue.task_done()
+        logger.info("Packet uploaded")
+        logger.debug("Mapped packet: {}".format(thingspeak_packet))
 
+        # Thingspeak requires a minimum of 15 seconds between uploads
         time.sleep(15)
+        logger.debug("Uploader ready...")
 
 
 if __name__ == '__main__':
@@ -213,8 +227,13 @@ if __name__ == '__main__':
     upload_thread = Thread(target=upload_loop, name="uploader")
 
     read_thread.start()
+    logger.info("Reader thread started")
+
     process_thread.start()
+    logger.info("Processor thread started")
+
     upload_thread.start()
+    logger.info("Upload thread started")
 
     while True:
         try:
