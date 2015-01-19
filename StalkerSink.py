@@ -1,5 +1,6 @@
 import datetime
 from threading import Thread
+from datetime import date
 import serial
 from serial.serialutil import SerialException
 import time
@@ -13,7 +14,7 @@ from settings import *
 
 __author__ = 'Leenix'
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 processor_queue = Queue()
@@ -151,7 +152,10 @@ def process_stalker_packet(data):
 
 def write_entry_to_file(entry):
     try:
-        f = open(OUTPUT_FILENAME, 'ab')
+        # Add prefix to the filename for monthly log files
+        prefix = datetime.datetime.now().strftime("%Y-%m ")
+        f = open(prefix + OUTPUT_FILENAME, 'ab')
+
         f.write(str(entry))
         f.write('\n')
         f.close()
@@ -212,6 +216,7 @@ def upload_loop():
         thingspeak_packet = ThingspeakChannel.map_entry(processed_entry)
         ThingspeakChannel.update(thingspeak_packet)
         upload_queue.task_done()
+
         logger.info("Packet uploaded")
         logger.debug("Mapped packet: {}".format(thingspeak_packet))
 
