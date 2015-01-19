@@ -70,7 +70,6 @@ def read_xbee_packet():
     logger.debug("Frame Type: {}".format(frame_type))
     remaining_packet_bytes -= 1
 
-
     # Address
     address = ""
     for x in range(0, 8):
@@ -128,7 +127,7 @@ def process_stalker_packet(data):
     offset = total_seconds((datetime.datetime(2000, 1, 1, 0, 0, 0, 0) - datetime.datetime(1970, 1, 1, 0, 0, 0, 0)))
 
     station_id, ts, air_temp, wall_temp, surface_temp, case_temp, humidity, lux, sound, current, \
-    battery_percent = struct.unpack(">BIHHHHHHHHBx", data)
+    battery_percent, version = struct.unpack(">BIHHHHHHHHBB", data)
     ts_time = datetime.datetime.utcfromtimestamp(ts + offset).strftime("%Y-%m-%d %H:%M")
 
     new_entry = {
@@ -141,8 +140,9 @@ def process_stalker_packet(data):
         'humidity': float(humidity) / 100,
         'illuminance': lux,
         'sound': sound,
-        'current': current,
-        'battery': battery_percent
+        'current': float(current) / 100,
+        'battery': battery_percent,
+        'version': version
     }
 
     logger.info("Received Data: {}".format(new_entry))
