@@ -214,15 +214,23 @@ def upload_loop():
     while True:
         processed_entry = upload_queue.get()
         thingspeak_packet = ThingspeakChannel.map_entry(processed_entry)
-        ThingspeakChannel.update(thingspeak_packet)
-        upload_queue.task_done()
 
-        logger.info("Packet uploaded")
-        logger.debug("Mapped packet: {}".format(thingspeak_packet))
+        try:
+            ThingspeakChannel.update(thingspeak_packet)
+            upload_queue.task_done()
 
-        # Thingspeak requires a minimum of 15 seconds between uploads
-        time.sleep(15)
-        logger.debug("Uploader ready...")
+            logger.info("Packet uploaded")
+            logger.debug("Mapped packet: {}".format(thingspeak_packet))
+
+            # Thingspeak requires a minimum of 15 seconds between uploads
+            time.sleep(15)
+            logger.debug("Uploader ready...")
+
+        except Exception:
+            logger.warning("Could not upload packet")
+            time.sleep(2)
+
+
 
 
 if __name__ == '__main__':
